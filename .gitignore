@@ -1,0 +1,8 @@
+# .gitignore — Regime Radar
+# Never commit keys, env files, or fetched keyed data.
+.env
+*.pem
+*.key
+data/rwa.json
+data/.regime-cache.json
+__pycache__/

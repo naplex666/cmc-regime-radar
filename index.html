@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regime Radar — CoinMarketCap Market Regime Dashboard</title>
+<style>
+  :root { --bg:#0b1220; --card:#121c2e; --card2:#0f1728; --text:#e6edf7; --muted:#8fa1b8;
+    --accent:#3861fb; --green:#16c784; --red:#ea3943; --amber:#f6b87e; --border:#22314d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5; }
+  .wrap { max-width:1020px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:28px; margin:0 0 4px; }
+  h1 span { color:var(--accent); }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:18px 20px; margin-bottom:16px; }
+  .card h2 { font-size:16px; margin:0 0 10px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--muted); }
+  #status { font-size:13px; padding:8px 12px; border-radius:8px; margin-bottom:16px;
+    background:var(--card2); border:1px solid var(--border); color:var(--muted); }
+  #status.live { border-color:var(--green); color:var(--green); }
+  #status.fallback { border-color:var(--amber); color:var(--amber); }
+  #regimeLine { font-size:22px; font-weight:700; margin:6px 0; }
+  #takeaway { font-size:15px; color:var(--text); margin:6px 0 0; }
+  .fine { font-size:12px; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; }
+  .stat .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .stat .value { font-size:22px; font-weight:700; margin-top:2px; }
+  .stat .extra { font-size:12px; color:var(--muted); }
+  .pos { color:var(--green); } .neg { color:var(--red); }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  input[type="search"] { flex:1; min-width:180px; padding:9px 12px; border-radius:8px;
+    border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:14px; }
+  button { padding:9px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--card2); color:var(--text); font-size:14px; cursor:pointer; }
+  button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:hover { border-color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; color:var(--muted); font-size:12px; text-transform:uppercase;
+    letter-spacing:.05em; padding:8px 6px; border-bottom:1px solid var(--border); cursor:pointer; }
+  td { padding:8px 6px; border-bottom:1px solid var(--border); }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  tr:hover td { background:var(--card2); }
+  .locked { color:var(--muted); }
+  code { background:var(--card2); padding:1px 6px; border-radius:5px; font-size:13px; }
+  a { color:#7aa2ff; }
+  footer { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Regime Radar <span>· CoinMarketCap</span></h1>
+  <p class="sub">Is the market fearful or greedy — and is the money in BTC or in alts?
+    One verdict, built from five numbers only CoinMarketCap can give you in one call each.</p>
+  <div id="status">Loading live data from the CoinMarketCap keyless API…</div>
+
+  <section class="card">
+    <h2>Regime verdict</h2>
+    <div id="regimeLine">—</div>
+    <p id="takeaway">—</p>
+    <p class="fine">Not financial advice. The verdict is a description of market data, not a recommendation.</p>
+  </section>
+
+  <section class="card">
+    <h2>The five numbers behind it</h2>
+    <div class="grid" id="evidence"></div>
+  </section>
+
+  <section class="card">
+    <h2>Market snapshot</h2>
+    <div class="grid" id="snapshot"></div>
+  </section>
+
+  <section class="card">
+    <h2>Top-100 screener</h2>
+    <div class="controls">
+      <input type="search" id="filter" placeholder="Filter by name or symbol…" aria-label="Filter coins">
+      <button id="btnAll" class="active">All</button>
+      <button id="btnGainers">Gainers 24h</button>
+      <button id="btnLosers">Losers 24h</button>
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th data-sort="cmc_rank">#</th><th data-sort="name">Name</th>
+        <th class="num" data-sort="price_usd">Price</th>
+        <th class="num" data-sort="percent_change_24h">24h</th>
+        <th class="num" data-sort="percent_change_7d">7d</th>
+        <th class="num" data-sort="percent_change_30d">30d</th>
+        <th class="num" data-sort="market_cap_usd">Market cap</th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="7">Loading…</td></tr></tbody>
+    </table>
+    </div>
+    <p class="fine" id="tableNote"></p>
+  </section>
+
+  <section class="card">
+    <h2>RWA watch — tokenised real-world assets</h2>
+    <div id="rwa"><p class="locked">Loading…</p></div>
+  </section>
+
+  <footer class="card">
+    <h2>How this is built</h2>
+    <p>Core dashboard: <strong>no API key needed.</strong> It calls the CoinMarketCap
+      <strong>keyless public API</strong> (<code>https://pro-api.coinmarketcap.com/public-api</code>)
+      once per load — 6 calls total, cached in memory, never re-fetched per keystroke:
+      <code>/v3/fear-and-greed/latest</code>,
+      <code>/v1/altcoin-season-index/latest</code>,
+      <code>/v3/index/cmc100-latest</code>, <code>/v3/index/cmc20-latest</code>,
+      <code>/v1/global-metrics/quotes/latest</code>,
+      <code>/v1/cryptocurrency/listings/latest</code>.
+      The RWA section is keyed (free Basic tier and up):
+      <code>/v5/real-world-assets/assets/list</code> and
+      <code>/v5/real-world-assets/issuers/list</code> — run
+      <code>python3 fetch_rwa.py</code> with <code>CMC_PRO_API_KEY</code> set to unlock it.</p>
+    <p>Built for the Build with CMC: API Hackathon Round 2 (Plushie), Data and Visualisation track.
+      See <a href="README.md">README.md</a> for endpoints, limits, and the demo video status.</p>
+  </footer>
+</div>
+
+<script>
+/* VERDICT RULES v1 — keep in sync with regime.py:
+   Fear & Greed: <=24 Extreme Fear, <=44 Fear, <=55 Neutral, <=74 Greed, else Extreme Greed.
+   Altcoin Season index: >=75 Altcoin Season, <=25 Bitcoin Season, else Neutral.
+   Regime line: "{F&G label} · {Alt/BTC season label} · CMC100 {up/down} {x}% in 24h · BTC dominance {x}%" */
+const BASE = "https://pro-api.coinmarketcap.com/public-api";
+const CALLS = [
+  ["fear_greed", "/v3/fear-and-greed/latest"],
+  ["altcoin_season", "/v1/altcoin-season-index/latest"],
+  ["cmc100", "/v3/index/cmc100-latest"],
+  ["cmc20", "/v3/index/cmc20-latest"],
+  ["global_metrics", "/v1/global-metrics/quotes/latest"],
+  ["listings", "/v1/cryptocurrency/listings/latest?limit=100&convert=USD"],
+];
+
+function fgLabel(v) {
+  if (v == null) return "Unknown";
+  if (v <= 24) return "Extreme Fear";
+  if (v <= 44) return "Fear";
+  if (v <= 55) return "Neutral";
+  if (v <= 74) return "Greed";
+  return "Extreme Greed";
+}
+function seasonLabel(i) {
+  if (i == null) return "Unknown";
+  if (i >= 75) return "Altcoin Season";
+  if (i <= 25) return "Bitcoin Season";
+  return "Neutral";
+}
+function takeaway(fgLabel_, season, btcDom, cmc100Chg) {
+  if (fgLabel_ === "Extreme Fear" && btcDom != null && btcDom > 58)
+    return "Risk-off: capital is hiding in BTC. New money usually waits for Fear to lift before rotating to alts.";
+  if ((fgLabel_ === "Extreme Fear" || fgLabel_ === "Fear") && season === "Altcoin Season")
+    return "Fearful market, but alts are still outperforming BTC — nervous rotation, not a broad exit.";
+  if ((fgLabel_ === "Greed" || fgLabel_ === "Extreme Greed") && season === "Altcoin Season")
+    return "Risk-on and alts leading: the classic late-cycle alt rotation. Watch for Fear & Greed rolling over first.";
+  if ((fgLabel_ === "Greed" || fgLabel_ === "Extreme Greed") && season === "Bitcoin Season")
+    return "Greedy but BTC-led: strength is concentrated in Bitcoin, alts are lagging the move.";
+  if (fgLabel_ === "Neutral" && season === "Neutral")
+    return "No strong regime: sentiment and rotation are both flat. Wait for Fear & Greed or the Altcoin Season index to break out.";
+  if (cmc100Chg != null && cmc100Chg < -2)
+    return "Broad market down over 24h while sentiment is shaky — defensive positioning is dominating.";
+  return "Mixed signals: check the five numbers above rather than any single indicator.";
+}
+
+const fmtUSD = n => n == null ? "n/a"
+  : n >= 1e12 ? "$" + (n / 1e12).toFixed(3) + "T"
+  : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B"
+  : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M"
+  : "$" + n.toLocaleString(undefined, {maximumFractionDigits: 2});
+const fmtPct = n => n == null ? "n/a" : (n > 0 ? "+" : "") + n.toFixed(2) + "%";
+const pctClass = n => n == null ? "" : (n > 0 ? "pos" : (n < 0 ? "neg" : ""));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function normalise(raw) {
+  const gm = raw.global_metrics || {};
+  const quote = (gm.quote || {}).USD || {};
+  const listings = (raw.listings || []).map(c => {
+    const q = (c.quote || {}).USD || {};
+    return { id: c.id, name: c.name, symbol: c.symbol, cmc_rank: c.cmc_rank,
+      price_usd: q.price, percent_change_24h: q.percent_change_24h,
+      percent_change_7d: q.percent_change_7d, percent_change_30d: q.percent_change_30d,
+      market_cap_usd: q.market_cap, volume_24h_usd: q.volume_24h };
+  });
+  return {
+    fetched_at: new Date().toISOString(),
+    fear_greed: raw.fear_greed, altcoin_season: raw.altcoin_season,
+    cmc100: raw.cmc100, cmc20: raw.cmc20,
+    global_metrics: {
+      total_market_cap_usd: quote.total_market_cap,
+      total_market_cap_24h_pct: quote.total_market_cap_yesterday_percentage_change,
+      total_volume_24h_usd: quote.total_volume_24h,
+      btc_dominance: gm.btc_dominance, eth_dominance: gm.eth_dominance,
+      active_cryptocurrencies: gm.active_cryptocurrencies,
+      total_cryptocurrencies: gm.total_cryptocurrencies,
+      defi_market_cap_usd: quote.defi_market_cap,
+      stablecoin_market_cap_usd: quote.stablecoin_market_cap },
+    listings_top: listings };
+}
+
+let coins = [], sortKey = "cmc_rank", sortDir = 1, mode = "all";
+
+function render(data, live) {
+  const status = document.getElementById("status");
+  status.textContent = live
+    ? "● Live — CoinMarketCap keyless API · updated " + new Date(data.fetched_at).toLocaleTimeString()
+    : "● Showing bundled snapshot from " + (data.fetched_at || "18 Nov 2026") + " — live API was rate-limited (anonymous pool). Data below is the real captured snapshot, not invented. Click Refresh to retry live.";
+  status.className = live ? "live" : "fallback";
+  status.id = "status";
+
+  const fg = data.fear_greed || {}, season = data.altcoin_season || {};
+  const c100 = data.cmc100 || {}, c20 = data.cmc20 || {}, gm = data.global_metrics || {};
+  const fgL = fgLabel(fg.value), sL = seasonLabel(season.altcoin_index);
+  const chg = c100.value_24h_percentage_change;
+  const dir = chg == null ? "flat" : (chg > 0 ? "up" : (chg < 0 ? "down" : "flat"));
+  document.getElementById("regimeLine").textContent =
+    `${fgL} · ${sL} · CMC100 ${dir} ${chg == null ? "n/a" : Math.abs(chg).toFixed(2) + "%"} in 24h · BTC dominance ${gm.btc_dominance == null ? "n/a" : gm.btc_dominance.toFixed(1) + "%"}`;
+  document.getElementById("takeaway").textContent =
+    takeaway(fgL, sL, gm.btc_dominance, chg);
+
+  const ev = [
+    ["Fear & Greed", fg.value ?? "n/a", fg.value_classification || "", ""],
+    ["Altcoin Season", season.altcoin_index ?? "n/a", "yearly " + (season.yearly_low ?? "?") + "–" + (season.yearly_high ?? "?"), ""],
+    ["CMC100", c100.value ?? "n/a", fmtPct(c100.value_24h_percentage_change) + " 24h", pctClass(c100.value_24h_percentage_change)],
+    ["CMC20", c20.value ?? "n/a", fmtPct(c20.value_24h_percentage_change) + " 24h", pctClass(c20.value_24h_percentage_change)],
+    ["BTC dominance", gm.btc_dominance == null ? "n/a" : gm.btc_dominance.toFixed(2) + "%", "ETH " + (gm.eth_dominance == null ? "n/a" : gm.eth_dominance.toFixed(2) + "%"), ""],
+  ];
+  document.getElementById("evidence").innerHTML = ev.map(([l, v, e, cls]) =>
+    `<div class="stat"><div class="label">${l}</div><div class="value ${cls}">${v}</div><div class="extra">${esc(e)}</div></div>`).join("");
+
+  const snap = [
+    ["Total market cap", fmtUSD(gm.total_market_cap_usd), fmtPct(gm.total_market_cap_24h_pct) + " 24h", pctClass(gm.total_market_cap_24h_pct)],
+    ["24h volume", fmtUSD(gm.total_volume_24h_usd), "", ""],
+    ["Active cryptocurrencies", (gm.active_cryptocurrencies ?? "n/a").toLocaleString?.() ?? gm.active_cryptocurrencies, "of " + (gm.total_cryptocurrencies ?? "n/a").toLocaleString?.() + " tracked", ""],
+    ["DeFi market cap", fmtUSD(gm.defi_market_cap_usd), "", ""],
+    ["Stablecoin mcap", fmtUSD(gm.stablecoin_market_cap_usd), "", ""],
+  ];
+  document.getElementById("snapshot").innerHTML = snap.map(([l, v, e, cls]) =>
+    `<div class="stat"><div class="label">${l}</div><div class="value ${cls}">${v}</div><div class="extra">${esc(e)}</div></div>`).join("");
+
+  coins = data.listings_top || [];
+  renderTable();
+  document.getElementById("tableNote").textContent =
+    coins.length ? `${coins.length} coins · sorted by rank · click a column header to sort`
+                 : "No listings data in this snapshot — refresh to retry the live API.";
+}
+
+function renderTable() {
+  const q = (document.getElementById("filter").value || "").toLowerCase();
+  let list = coins.filter(c =>
+    (!q || (c.name + " " + c.symbol).toLowerCase().includes(q)) &&
+    (mode === "all" || (mode === "gainers" && (c.percent_change_24h ?? 0) > 0) ||
+     (mode === "losers" && (c.percent_change_24h ?? 0) < 0)));
+  list = [...list].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av == null) return 1; if (bv == null) return -1;
+    return (typeof av === "string" ? av.localeCompare(bv) : av - bv) * sortDir;
+  });
+  document.getElementById("rows").innerHTML = list.length ? list.map(c => `<tr>
+    <td>${c.cmc_rank ?? ""}</td><td>${esc(c.name)} <span class="fine">${esc(c.symbol)}</span></td>
+    <td class="num">${c.price_usd == null ? "n/a" : "$" + c.price_usd.toLocaleString(undefined, {maximumFractionDigits: c.price_usd < 1 ? 4 : 2})}</td>
+    <td class="num ${pctClass(c.percent_change_24h)}">${fmtPct(c.percent_change_24h)}</td>
+    <td class="num ${pctClass(c.percent_change_7d)}">${fmtPct(c.percent_change_7d)}</td>
+    <td class="num ${pctClass(c.percent_change_30d)}">${fmtPct(c.percent_change_30d)}</td>
+    <td class="num">${fmtUSD(c.market_cap_usd)}</td></tr>`).join("")
+    : `<tr><td colspan="7">No coins match this filter.</td></tr>`;
+}
+
+async function loadRWA() {
+  const el = document.getElementById("rwa");
+  try {
+    const r = await fetch("data/rwa.json");
+    if (!r.ok) throw new Error("no rwa.json");
+    const d = await r.json();
+    const assets = d.assets || [];
+    el.innerHTML = `<p class="fine">Live RWA data · fetched ${esc(d.fetched_at || "")} · CoinMarketCap Pro API (keyed, free Basic tier)</p>` +
+      (assets.length ? `<table><thead><tr><th>Asset</th><th>Type</th><th class="num">Avg tokenised price</th><th class="num">Tokenised mcap</th><th class="num">24h volume</th></tr></thead><tbody>` +
+        assets.slice(0, 20).map(a => { const q = (a.quote || {}).USD || {};
+          return `<tr><td>${esc(a.name || a.symbol)} <span class="fine">${esc(a.symbol || "")}</span></td><td>${esc(a.asset_type || "")}</td><td class="num">${q.average_tokenized_price == null ? "n/a" : "$" + q.average_tokenized_price.toLocaleString()}</td><td class="num">${fmtUSD(q.tokenized_market_cap)}</td><td class="num">${fmtUSD(q.tokenized_volume_24h)}</td></tr>`; }).join("") + `</tbody></table>` : "<p>No assets returned.</p>") +
+      ((d.issuers || []).length ? `<p class="fine" style="margin-top:10px">Issuers tracked: ${d.issuers.map(i => esc(i.name || i.issuer_id)).join(", ")}</p>` : "");
+  } catch {
+    el.innerHTML = `<p class="locked"><strong>Locked — needs a free CoinMarketCap API key.</strong><br>
+      Tokenised stocks, commodities, treasuries and funds live on the keyed Pro API, not the keyless one.
+      Get a free key at <a href="https://pro.coinmarketcap.com/login">pro.coinmarketcap.com</a> (no card),
+      then run <code>export CMC_PRO_API_KEY="your-key" &amp;&amp; python3 fetch_rwa.py</code> and reload this page.<br>
+      Endpoints: <code>/v5/real-world-assets/assets/list</code> ·
+      <code>/v5/real-world-assets/issuers/list</code> ·
+      <code>/v5/real-world-assets/map</code> ·
+      <code>/v5/real-world-assets/quotes/latest</code>.</p>`;
+  }
+}
+
+async function load() {
+  const status = document.getElementById("status");
+  try {
+    const raw = {};
+    for (const [key, path] of CALLS) {           // sequential + gentle: shared anonymous pool
+      const r = await fetch(BASE + path);
+      const j = await r.json();
+      if (String((j.status || {}).error_code) !== "0") throw new Error("CMC " + ((j.status || {}).error_message || "error") + " on " + path);
+      raw[key] = j.data;
+      await new Promise(res => setTimeout(res, 400));
+    }
+    render(normalise(raw), true);
+  } catch (e) {
+    try {
+      const r = await fetch("data/snapshot.json");
+      render(await r.json(), false);
+    } catch {
+      status.textContent = "Could not load live data or the bundled snapshot: " + e.message;
+    }
+  }
+  loadRWA();
+}
+
+document.getElementById("filter").addEventListener("input", renderTable);
+document.querySelectorAll("th[data-sort]").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.sort;
+  if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+  renderTable();
+}));
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll(".controls button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active"); renderTable();
+}
+document.getElementById("btnAll").addEventListener("click", e => setMode("all", e.target));
+document.getElementById("btnGainers").addEventListener("click", e => setMode("gainers", e.target));
+document.getElementById("btnLosers").addEventListener("click", e => setMode("losers", e.target));
+
+load();
+</script>
+</body>
+</html>
